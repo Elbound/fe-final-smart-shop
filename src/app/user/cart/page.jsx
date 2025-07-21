@@ -1,109 +1,162 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { db } from '@/firebase';
+import {
+  collection,
+  getDoc,
+  doc,
+  writeBatch,
+  addDoc
+} from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
-const initialCart = [
-  {
-    id: 'p1',
-    name: 'Wireless Headphones',
-    image: '/images/headphones.png',
-    price: 150,
-    quantity: 1,
-    stock: 3,
-  },
-  {
-    id: 'p2',
-    name: 'Smart Watch',
-    image: '/images/watch.png',
-    price: 90,
-    quantity: 2,
-    stock: 1,
-  },
+const mockCart = [
+  { productId: 'rYEYgs5uTTBe4gcIXh18', quantity: 2 },
+  { productId: 'siY3prUYStwMVvp4kssq', quantity: 1 }
 ];
 
 export default function CartPage() {
-  const [cart, setCart] = useState(initialCart);
+  const [products, setProducts] = useState([]);
+  const [quantities, setQuantities] = useState({});
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const updateQuantity = (id, delta) => {
-    setCart((prev) =>
-      prev
-        .map((item) => {
-          if (item.id === id) {
-            const newQty = item.quantity + delta;
-            if (newQty <= 0) return null;
-            return { ...item, quantity: newQty };
-          }
-          return item;
+  const auth = getAuth();
+  const uid = auth.currentUser?.uid;
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const productDetails = await Promise.all(
+        mockCart.map(async (item) => {
+          const docRef = doc(db, 'Product', item.productId);
+          const snap = await getDoc(docRef);
+          return {
+            id: item.productId,
+            ...snap.data()
+          };
         })
-        .filter(Boolean)
-    );
-  };
+      );
 
-  const removeItem = (id) => {
-    setCart((prev) => prev.filter((item) => item.id !== id));
-  };
+      setProducts(productDetails);
+      const initialQuantities = {};
+      mockCart.forEach(item => {
+        initialQuantities[item.productId] = item.quantity;
+      });
+      setQuantities(initialQuantities);
+    };
 
-  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    fetchProducts();
+  }, []);
 
-  const purchase = () => {
-    const hasInsufficientStock = cart.some((item) => item.quantity > item.stock);
-    if (hasInsufficientStock) {
-      alert('Purchase failed: One or more items exceed available stock.');
+  const handleQuantityChange = (productId, value) => {
+    const newQty = parseInt(value);
+    if (isNaN(newQty)) return;
+
+    if (newQty < 1) {
+      // Remove product from cart
+      const updatedProducts = products.filter(p => p.id !== productId);
+      setProducts(updatedProducts);
+      const updatedQuantities = { ...quantities };
+      delete updatedQuantities[productId];
+      setQuantities(updatedQuantities);
     } else {
-      alert('Purchase successful!');
-      setCart([]);
+      setQuantities({ ...quantities, [productId]: newQty });
     }
   };
 
+  const handlePurchase = async () => {
+    setError('');
+    setSuccess('');
+
+    if (!uid) {
+      setError('You must be logged in to make a purchase.');
+      return;
+    }
+
+    const batch = writeBatch(db);
+    const items = [];
+    const prices = [];
+    const quantitiesOrdered = [];
+
+    let totalPrice = 0;
+
+    for (const product of products) {
+      const docRef = doc(db, 'Product', product.id);
+      const snap = await getDoc(docRef);
+      const currentData = snap.data();
+      const requestedQty = quantities[product.id];
+
+      if (requestedQty > currentData.quantity) {
+        setError(
+          `❌ Not enough stock for "${product.name}". Available: ${currentData.quantity}, requested: ${requestedQty}`
+        );
+        return;
+      }
+
+      items.push(product.name);
+      prices.push(product.price);
+      quantitiesOrdered.push(requestedQty);
+
+      totalPrice += product.price * requestedQty;
+
+      batch.update(docRef, {
+        quantity: currentData.quantity - requestedQty,
+      });
+    }
+
+    await batch.commit();
+
+    await addDoc(collection(db, 'User', uid, 'OrderHistory'), {
+      items,
+      price: prices,
+      quantity: quantitiesOrdered,
+      total: totalPrice,
+      time: new Date().toLocaleString(), // Keep time as string
+    });
+
+    setSuccess('✅ Purchase successful! Check your Order History.');
+    setProducts([]);
+    setQuantities({});
+  };
+
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-6 max-w-4xl mx-auto">
-      <h1 className="text-5xl font-bold mb-4">Cart</h1>
-      {cart.length === 0 ? (
-        <p>Your cart is empty.</p>
+    <div className="min-h-screen bg-white p-6">
+      <h1 className="text-2xl font-semibold mb-4">🛒 Your Cart</h1>
+
+      {products.length === 0 ? (
+        <p className="text-gray-600">Your cart is empty.</p>
       ) : (
-        <div className="space-y-4">
-          {cart.map((item) => (
-            <div key={item.id} className="flex items-center justify-between p-4 border rounded-md bg-gray-50">
-              <img src={item.image} alt={item.name} className="w-16 h-16 object-contain" />
-              <div className="flex-1 ml-4">
-                <p className="font-medium">{item.name}</p>
-                <p>Price: ${item.price}</p>
-                <p>Total: ${item.price * item.quantity}</p>
-                {item.quantity > item.stock && (
-                  <p className="text-red-600">Not enough stock available</p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => updateQuantity(item.id, -1)}
-                  className="px-2 py-1 border rounded hover:bg-gray-200"
-                >
-                  -
-                </button>
-                <span>{item.quantity}</span>
-                <button
-                  onClick={() => updateQuantity(item.id, 1)}
-                  className="px-2 py-1 border rounded hover:bg-gray-200"
-                >
-                  +
-                </button>
-                <button
-                  onClick={() => removeItem(item.id)}
-                  className="ml-4 text-red-600 hover:underline"
-                >
-                  Remove
-                </button>
-              </div>
+        <div className="space-y-6">
+          {products.map((product) => (
+            <div key={product.id} className="border rounded p-4 bg-gray-50">
+              <h2 className="font-medium text-lg">{product.name}</h2>
+              <p className="text-sm text-gray-600 mb-1">{product.description}</p>
+              <p className="text-sm">💰 Price: ${product.price}</p>
+              <p className="text-sm">📦 In stock: {product.quantity}</p>
+              <label className="block mt-2 text-sm">
+                Quantity:
+                <input
+                  type="number"
+                  //min={1}
+                  className="ml-2 border p-1 w-20"
+                  value={quantities[product.id] || 1}
+                  onChange={(e) =>
+                    handleQuantityChange(product.id, e.target.value)
+                  }
+                />
+              </label>
             </div>
           ))}
-          <div className="text-right font-semibold text-lg mt-4">
-            Total: ${totalPrice}
-          </div>
+
           <button
-            onClick={purchase}
-            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            onClick={handlePurchase}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
             Purchase
           </button>
+
+          {error && <p className="text-red-600 mt-2">{error}</p>}
+          {success && <p className="text-green-600 mt-2">{success}</p>}
         </div>
       )}
     </div>
