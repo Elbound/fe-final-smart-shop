@@ -2,25 +2,34 @@
 import AddProductModal from "@/component/add-product-modal";
 import DeleteProductModal from "@/component/delete-product-modal";
 import { useEffect, useState } from "react";
-import getTemplateProductData from "@/component/template-product-data";
+// import getTemplateProductData from "@/component/template-product-data";
 import styles from './seller-style.module.css';
+import { auth } from "@/firebase";
+import useFetchProductsData from "@/hooks/useFetchProductsData";
 
 export default function SellerDashboardPage() {
     const [showModal, setShowModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [data, setData] = useState([]);
+
+    const user = auth.currentUser;
+    const pd = useFetchProductsData();
+    // console.log(pd);
+    
+    useEffect(()=>{
+        const prod = pd
+        //.filter(item => item.sellerId === user.uid);
+        //console.log(pd);
+        
+        
+        setData(prod);
+    },[pd]);
 
     const handleAddProduct = () => {
         console.log("Add Product button clicked");
         setShowModal(true);
     }
-
-    const [data, setData] = useState([]);
-    useEffect(()=>{
-        setData(getTemplateProductData());
-        console.log("Data fetched:", data);
-    },[]);
-
-
+    
     const [selected, setSelected] = useState([]);
 
     const handleSelect = (name) => {
@@ -74,7 +83,7 @@ export default function SellerDashboardPage() {
                                 />
                             </td>
                             <td className={styles.cell}>{items.name}</td>
-                            <td className={styles.cell}>{items.desc}</td>
+                            <td className={styles.cell}>{items.description}</td>
                             <td className={styles.cell}>{items.quantity}</td>
                             <td className={styles.cell}>
                                 <button className="px-4 py-2 bg-blue-500 text-white rounded">Edit</button>
