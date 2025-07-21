@@ -1,8 +1,9 @@
 'use client';
 import { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/firebase/config';
+import { auth } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import Link from 'next/link';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -20,9 +21,9 @@ export default function LoginForm() {
       const user = userCredential.user;
 
       if (email.includes('seller')) {
-        router.push('/dashboard/seller');
+        router.push('seller/dashboard');
       } else {
-        router.push('/dashboard/customer');
+        router.push('user/dashboard');
       }
     } catch (err) {
       setError('Invalid email or password.');
@@ -40,9 +41,15 @@ export default function LoginForm() {
         className="border p-2 w-full"
         value={password} onChange={(e) => setPassword(e.target.value)} />
       <button type="submit" className="flex items-center gap-1 px-3 py-2 rounded bg-custom-blue hover:bg-hover-dark-blue text-black hover:text-white transition w-full p-2" style={{ backgroundColor: '#caf0f8' }}>Login</button>
-      <p className="text-center text-sm">
-        Don't have an account? <a href="/register" className="flex items-center gap-1 px-3 py-2 rounded bg-register-navy hover:bg-hover-dark-blue text-white transition">Register</a>
-      </p>
+      <div>
+       <p className="mt-4 text-center text-sm text-gray-600">
+          Dont have an account?{' '}
+          <Link href="/register" className="text-blue-500 hover:underline">
+            Register
+        </Link>
+        </p>
+      </div>
+      
     </form>
   );
 }
