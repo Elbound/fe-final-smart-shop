@@ -1,5 +1,4 @@
-
-"use client"
+"use client";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -8,6 +7,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
 export default function RegisterPage() {
+    
     const router = useRouter();
     const [errors, setErrors] = useState({});
     const [form, setForm] = useState({

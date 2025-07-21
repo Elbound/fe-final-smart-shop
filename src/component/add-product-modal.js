@@ -1,16 +1,22 @@
 
 import { useState } from "react";
 import './add-product-modal.css';
+import { auth, db } from "@/firebase";
+import { addDoc, collection } from "firebase/firestore";
 
 
 export default function AddProductModal({ setShowModal }) {
 
+    const user = auth.currentUser;
+
     const [form, setForm] = useState({
         name: "",
-        desc: "",
+        description: "",
+        category: "",
         price: 0,
         quantity: 0,
-        //seller: get current user
+        seller: user.uid,
+        image: ""
     });
 
     const handleCloseModal = () => {
@@ -23,12 +29,32 @@ export default function AddProductModal({ setShowModal }) {
             ...prevForm,
             [name]: value,
         }));
+        
     };
 
     const handleSubmit = () => {
-        console.log("Product added:", form);
+        // console.log("Product added:", form);
+        if (!verifyForm()) return;
+
+        const productCol = collection(db, "Product");
+        addDoc(productCol, {
+            ...form,
+            image: form.image ? URL.createObjectURL(form.image) : "/asset/no_image_available.png"
+        })
         setShowModal(false);
     }
+
+    const [error, setError] = useState("");
+
+    const verifyForm = () => {
+        const { name, description, category, price, quantity } = form;
+        if (!name || !description || !category || price <= 0 || quantity <= 0) {
+            setError("Please fill all fields correctly.");
+            return false;
+        }
+        setError("");
+        return true;
+    };
 
     return (
         <>
@@ -39,6 +65,8 @@ export default function AddProductModal({ setShowModal }) {
                 </button>
                 <h2 className="modalStyle-title">Add Product</h2>
                 <form className="modalStyle-form" onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
+                    {error && <p className="text-red-500">{error}</p>}
+
                     <label>
                         Product Name:
                         <input
@@ -53,18 +81,18 @@ export default function AddProductModal({ setShowModal }) {
                         Product Image:
                         <input
                             type="file"
-                            name="productImage"
-                            value={form.email}
+                            name="image"
+                            value={form.image}
                             onChange={handleChange}
-                            required
+                            
                         />
                     </label>
                     <label>
                         Product Description:
                         <input
                             type="text"
-                            name="productDescription"
-                            value={form.name}
+                            name="description"
+                            value={form.description}
                             onChange={handleChange}
                             required
                         />
@@ -74,7 +102,7 @@ export default function AddProductModal({ setShowModal }) {
                         <input
                             type="number"
                             name="price"
-                            value={form.age}
+                            value={form.price}
                             onChange={handleChange}
                             min="0"
                             required
@@ -85,11 +113,27 @@ export default function AddProductModal({ setShowModal }) {
                         <input
                             type="number"
                             name="quantity"
-                            value={form.age}
+                            value={form.quantity}
                             onChange={handleChange}
                             min="0"
                             required
                         />
+                    </label>
+                    <label>
+                        Category:
+                        <select
+                            name="category"
+                            value={form.category}
+                            onChange={handleChange}
+                            required
+                        >
+                            <option value="" disabled>Select category</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="fashion">Fashion</option>
+                            <option value="books">Books</option>
+                            <option value="home">Home</option>
+                            <option value="other">Other</option>
+                        </select>
                     </label>
                     <button className="modalStyle-submit" type="submit">
                         Add
