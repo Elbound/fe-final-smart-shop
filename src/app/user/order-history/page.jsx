@@ -1,74 +1,76 @@
 'use client';
 
-const mockOrders = [
-  {
-    orderId: 'ORD001',
-    date: '2025-07-15',
-    products: [
-      {
-        id: 'p1',
-        name: 'Wireless Headphones',
-        image: '/images/headphones.png',
-        quantity: 1,
-        price: 150,
-      },
-    ],
-  },
-  {
-    orderId: 'ORD002',
-    date: '2025-07-10',
-    products: [
-      {
-        id: 'p2',
-        name: 'Smart Watch',
-        image: '/images/watch.png',
-        quantity: 2,
-        price: 90,
-      },
-      {
-        id: 'p3',
-        name: 'Bluetooth Speaker',
-        image: '/images/speaker.png',
-        quantity: 1,
-        price: 120,
-      },
-    ],
-  },
-];
+import { useEffect, useState } from 'react';
+import {
+  getFirestore,
+  collection,
+  query,
+  onSnapshot
+} from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { db } from '@/firebase';
 
 export default function OrderHistoryPage() {
-  return (
-    <div className="min-h-screen bg-white text-gray-900 p-6 max-w-4xl mx-auto">
-      <h1 className="text-5xl font-bold mb-4">Order History</h1>
-      {mockOrders.map((order) => {
-        const totalOrderPrice = order.products.reduce(
-          (sum, p) => sum + p.price * p.quantity,
-          0
-        );
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const auth = getAuth();
+  const user = auth.currentUser;
 
-        return (
-          <div key={order.orderId} className="mb-6 border rounded-md p-4 bg-gray-50">
-            <h2 className="text-lg font-semibold mb-2">
-              Order #{order.orderId} - <span className="font-normal">{order.date}</span>
-            </h2>
-            <div className="space-y-2">
-              {order.products.map((p) => (
-                <div key={p.id} className="flex items-center border rounded p-2 bg-white">
-                  <img src={p.image} alt={p.name} className="w-12 h-12 object-contain" />
-                  <div className="ml-4 flex-1">
-                    <p className="font-medium">{p.name}</p>
-                    <p>Quantity: {p.quantity}</p>
-                    <p>Total: ${p.quantity * p.price}</p>
-                  </div>
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const q = collection(db, 'User', user.uid, 'OrderHistory');
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const orderData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setOrders(orderData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-white p-6">
+        <h1 className="text-2xl font-semibold">📦 Order History</h1>
+        <p className="text-gray-600 mt-2">You must be logged in to view your orders.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white p-6">
+      <h1 className="text-2xl font-semibold mb-4">📦 Order History</h1>
+      {loading ? (
+        <p className="text-gray-600">Loading...</p>
+      ) : orders.length === 0 ? (
+        <p className="text-gray-600">No orders found.</p>
+      ) : (
+        <div className="space-y-4">
+          {orders.map((order) => (
+            <div
+              key={order.id}
+              className="border rounded p-4 bg-gray-50 shadow-sm"
+            >
+              <p className="font-medium">🕒 {order.time}</p>
+              {order.items?.map((item, index) => (
+                <div key={index} className="ml-4 text-sm text-gray-700">
+                  • {item} — {order.quantity[index]} × ${order.price[index]}
                 </div>
               ))}
-              <div className="text-right mt-2 font-semibold">
-                Order Total: ${totalOrderPrice}
-              </div>
+              <p className="mt-2 font-semibold text-right text-blue-700">
+                💰 Total: ${order.total}
+              </p>
             </div>
-          </div>
-        );
-      })}
+          ))}
+        </div>
+      )}
     </div>
   );
 }
