@@ -16,11 +16,11 @@ export default function Navbar() {
           <Home size={20} /> Home
         </button>
 
-        <button onClick={() => router.push('/dashboard/customer')} className="flex items-center gap-1 hover:text-blue-500">
+        <button onClick={() => router.push('/user/cart')} className="flex items-center gap-1 hover:text-blue-500">
           <ShoppingCart size={20} /> Cart
         </button>
 
-        <button onClick={() => router.push('/history')} className="flex items-center gap-1 hover:text-blue-500">
+        <button onClick={() => router.push('/order-history')} className="flex items-center gap-1 hover:text-blue-500">
           <History size={20} /> History
         </button>
 
