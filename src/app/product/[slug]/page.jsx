@@ -1,7 +1,7 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/firebase';
 import { redirect } from 'next/navigation';
-import AddToCartForm from '@/components/AddToCartForm';
+import AddToCartForm from '@/components/add-to-cart-form';
 import Link from 'next/link';
 
 export default async function ProductDetail({ params }) {
