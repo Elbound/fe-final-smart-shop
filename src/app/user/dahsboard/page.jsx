@@ -1,8 +1,4 @@
 'use client';
-import { redirect } from 'next/navigation';
-import { getAuth } from 'firebase/auth';
-import RecommendedProducts from '@/components/RecommendedProducts';
-import ProductList from '@/components/ProductList';
 
 export default function CustomerDashboard() {
   const auth = getAuth();
