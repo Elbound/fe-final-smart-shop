@@ -1,22 +1,23 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/firebase';
 import { redirect } from 'next/navigation';
-import AddToCartForm from '@/components/add-to-cart-form';
+import AddToCartForm from '@/component/add-to-cart-form';
 import Link from 'next/link';
 
 export default async function ProductDetail({ params }) {
   // 1. Authentication Check
   const user = auth.currentUser;
-  if (!user) redirect('/login');
+  console.log('Current User:', user);
+  // if (!user) redirect('/login');
 
   // 2. Role Verification
-  const userDoc = await getDoc(doc(db, 'users', user.uid));
-  if (userDoc.data()?.role !== 'customer') {
+  const userDoc = await getDoc(doc(db, 'User', user.uid));
+  if (userDoc.data()?.role !== 'User') {
     redirect('/login?error=customer_only');
   }
 
   // 3. Product Data Fetching
-  const productRef = doc(db, 'products', params.id);
+  const productRef = doc(db, 'Product', params.id);
   const productSnap = await getDoc(productRef);
   
   if (!productSnap.exists()) {
