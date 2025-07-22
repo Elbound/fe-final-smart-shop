@@ -10,7 +10,7 @@ export default function RecommendedProducts() {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const snapshot = await getDocs(collection(db, 'products'));
+      const snapshot = await getDocs(collection(db, 'Product'));
       const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
       // Get 10 random products

@@ -1,10 +1,13 @@
 'use client';
 import { redirect } from 'next/navigation';
-import { getAuth } from 'firebase/auth';
-import RecommendedProducts from '@/components/add-recommended-products';
-import ProductList from '@/components/add-product-list';
+// import { getAuth } from 'firebase/auth';
+import RecommendedProducts from '@/component/add-recommended-products';
+import ProductList from '@/component/add-product-list';
+import { auth } from '@/firebase';
+import Link from 'next/link';
 export default function CustomerDashboard() {
-  const auth = getAuth();
+  
+  console.log('Current User:', auth.currentUser);
   
   // Redirect if not logged in
   if (!auth.currentUser) {
